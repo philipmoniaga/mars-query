@@ -1,7 +1,7 @@
 import BigNumber from "bignumber.js";
 import { CosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { Tendermint34Client } from "@cosmjs/tendermint-rpc";
-import { QueryClient } from "@cosmjs/stargate";
+import { QueryClient, StargateClient } from "@cosmjs/stargate";
 import { toHex } from "@cosmjs/encoding";
 import {
   QueryAllContractStateRequest,
@@ -45,7 +45,7 @@ async function convertToAccountAddress(
       }
 
       // Wait for 1 second before processing the next model
-      await delay(100);
+      await delay(1000);
     }
   }
 }
@@ -167,4 +167,33 @@ async function processUserCollateralizationRatio(wallet: string) {
   console.log("=====================================");
 }
 
-start();
+let isStartInProgress = false;
+let lastProcessedHeight = 0;
+
+async function monitorNewBlocksAndStart() {
+  const client = await StargateClient.connect(rpc);
+
+  console.log("Starting block monitoring...");
+
+  setInterval(async () => {
+    try {
+      const currentHeight = await client.getHeight();
+
+      // Check if there's a new block and if start is not already in progress
+      if (currentHeight > lastProcessedHeight && !isStartInProgress) {
+        console.log(`New block detected! Height: ${currentHeight}`);
+        lastProcessedHeight = currentHeight; // Update the last processed height
+        isStartInProgress = true; // Indicate that processing is starting
+
+        await start(); // Call start for processing
+
+        isStartInProgress = false; // Reset the flag once processing completes
+      }
+    } catch (error) {
+      console.error("Error during block monitoring:", error);
+      isStartInProgress = false; // Ensure flag is reset in case of an error
+    }
+  }, 1000); // Adjust based on the block time of your blockchain
+}
+
+monitorNewBlocksAndStart();

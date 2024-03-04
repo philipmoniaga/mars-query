@@ -38,10 +38,14 @@ async function convertToAccountAddress(
 
     if (mapName.includes("colls")) {
       const jsonAddress = JSON.parse(hexString.substring(9, 75)).addr;
-      await processUserCollateralizationRatio(jsonAddress);
+      try {
+        await processUserCollateralizationRatio(jsonAddress);
+      } catch (error) {
+        console.log(error);
+      }
 
       // Wait for 1 second before processing the next model
-      await delay(1000);
+      await delay(100);
     }
   }
 }
